@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">VerticalViewPager</string>
+    <string name="click_me">Click Me</string>
+    <string name="clicked_num">You clicked %d</string>
+</resources>
