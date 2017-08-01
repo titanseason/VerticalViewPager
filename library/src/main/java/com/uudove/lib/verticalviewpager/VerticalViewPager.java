@@ -18,7 +18,9 @@ import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.os.ParcelableCompat;
 import android.support.v4.os.ParcelableCompatCreatorCallbacks;
+import android.support.v4.view.AbsSavedState;
 import android.support.v4.view.AccessibilityDelegateCompat;
+import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.view.WindowInsetsCompat;
 import android.support.v4.view.accessibility.AccessibilityEventCompat;
@@ -451,7 +453,9 @@ public class VerticalViewPager extends ViewGroup {
      */
     public void setAdapter(PagerAdapter adapter) {
         if (mAdapter != null) {
-            mAdapter.setViewPagerObserver(null);
+            if (mObserver != null) {
+                mAdapter.unregisterDataSetObserver(mObserver);
+            }
             mAdapter.startUpdate(this);
             for (int i = 0; i < mItems.size(); i++) {
                 final ItemInfo ii = mItems.get(i);
@@ -472,7 +476,7 @@ public class VerticalViewPager extends ViewGroup {
             if (mObserver == null) {
                 mObserver = new PagerObserver();
             }
-            mAdapter.setViewPagerObserver(mObserver);
+            mAdapter.registerDataSetObserver(mObserver);
             mPopulatePending = false;
             final boolean wasFirstLayout = mFirstLayout;
             mFirstLayout = true;
@@ -934,7 +938,7 @@ public class VerticalViewPager extends ViewGroup {
         if (velocity > 0) {
             duration = 4 * Math.round(1000 * Math.abs(distance / velocity));
         } else {
-            final float pageHeight = height * mAdapter.getPageHeight(mCurItem);
+            final float pageHeight = height * mAdapter.getPageWidth(mCurItem);
             final float pageDelta = (float) Math.abs(dx) / (pageHeight + mPageMargin);
             duration = (int) ((pageDelta + 1) * 100);
         }
@@ -951,7 +955,7 @@ public class VerticalViewPager extends ViewGroup {
         ItemInfo ii = new ItemInfo();
         ii.position = position;
         ii.object = mAdapter.instantiateItem(this, position);
-        ii.heightFactor = mAdapter.getPageHeight(position);
+        ii.heightFactor = mAdapter.getPageWidth(position);
         if (index < 0 || index >= mItems.size()) {
             mItems.add(ii);
         } else {
@@ -1258,7 +1262,7 @@ public class VerticalViewPager extends ViewGroup {
                     while (pos < ii.position) {
                         // We don't have an item populated for this,
                         // ask the adapter for an offset.
-                        offset += mAdapter.getPageHeight(pos) + marginOffset;
+                        offset += mAdapter.getPageWidth(pos) + marginOffset;
                         pos++;
                     }
                     ii.offset = offset;
@@ -1278,7 +1282,7 @@ public class VerticalViewPager extends ViewGroup {
                     while (pos > ii.position) {
                         // We don't have an item populated for this,
                         // ask the adapter for an offset.
-                        offset -= mAdapter.getPageHeight(pos) + marginOffset;
+                        offset -= mAdapter.getPageWidth(pos) + marginOffset;
                         pos--;
                     }
                     offset -= ii.heightFactor + marginOffset;
@@ -1298,7 +1302,7 @@ public class VerticalViewPager extends ViewGroup {
         for (int i = curIndex - 1; i >= 0; i--, pos--) {
             final ItemInfo ii = mItems.get(i);
             while (pos > ii.position) {
-                offset -= mAdapter.getPageHeight(pos--) + marginOffset;
+                offset -= mAdapter.getPageWidth(pos--) + marginOffset;
             }
             offset -= ii.heightFactor + marginOffset;
             ii.offset = offset;
@@ -1310,7 +1314,7 @@ public class VerticalViewPager extends ViewGroup {
         for (int i = curIndex + 1; i < itemCount; i++, pos++) {
             final ItemInfo ii = mItems.get(i);
             while (pos < ii.position) {
-                offset += mAdapter.getPageHeight(pos++) + marginOffset;
+                offset += mAdapter.getPageWidth(pos++) + marginOffset;
             }
             if (ii.position == n - 1) {
                 mLastOffset = offset + ii.heightFactor - 1;
@@ -2316,7 +2320,7 @@ public class VerticalViewPager extends ViewGroup {
                 ii = mTempItem;
                 ii.offset = lastOffset + lastHeight + marginOffset;
                 ii.position = lastPos + 1;
-                ii.heightFactor = mAdapter.getPageHeight(ii.position);
+                ii.heightFactor = mAdapter.getPageWidth(ii.position);
                 i--;
             }
             offset = ii.offset;
@@ -2428,7 +2432,7 @@ public class VerticalViewPager extends ViewGroup {
                     drawAt = (ii.offset + ii.heightFactor) * height;
                     offset = ii.offset + ii.heightFactor + marginOffset;
                 } else {
-                    float heightFactor = mAdapter.getPageHeight(pos);
+                    float heightFactor = mAdapter.getPageWidth(pos);
                     drawAt = (offset + heightFactor) * height;
                     offset += heightFactor + marginOffset;
                 }
